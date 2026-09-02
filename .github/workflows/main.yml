@@ -17,6 +17,9 @@ jobs:
           distribution: 'temurin'
           java-version: '11'
 
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -26,5 +29,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Turnip-Gen8-v35
+          name: FCL-Turnip-Gen8-v35
           path: app/build/outputs/apk/debug/*.apk
