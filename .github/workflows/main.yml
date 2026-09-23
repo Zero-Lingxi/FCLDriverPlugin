@@ -40,14 +40,17 @@ jobs:
           sed -i 's/resValue("string","app_name","[^"]*")/resValue("string","app_name","${{ github.event.inputs.driver_name }}")/' $GRADLE_FILE
           sed -i 's/manifestPlaceholders\["driver"\] = "[^"]*"/manifestPlaceholders["driver"] = "${{ github.event.inputs.driver_name }}"/' $GRADLE_FILE
           sed -i 's/package="[^"]*"/package="${{ github.event.inputs.package_name }}"/' app/src/main/AndroidManifest.xml
-          echo "===== 修改结果 ====="
-          grep -E "applicationId|applicationIdSuffix|resValue|manifestPlaceholders" $GRADLE_FILE
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
+      - name: 重命名 APK 为驱动名称
+        run: |
+          mv app/build/outputs/apk/debug/app-debug.apk \
+             "app/build/outputs/apk/debug/${{ github.event.inputs.driver_name }}.apk"
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: FCL-${{ github.event.inputs.driver_name }}
-          path: app/build/outputs/apk/debug/*.apk
+          name: ${{ github.event.inputs.driver_name }}
+          path: app/build/outputs/apk/debug/${{ github.event.inputs.driver_name }}.apk
