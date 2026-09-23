@@ -1,13 +1,22 @@
 name: Build Driver APK
 
 on:
-  push:
-    branches: [ "main" ]
   workflow_dispatch:
+    inputs:
+      package_name:
+        description: 'APK 包名'
+        required: true
+        default: 'com.plugin.renderer.turnipdefault'
+      driver_name:
+        description: '驱动名称'
+        required: true
+        default: 'Turnip default'
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -18,16 +27,36 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: 修改包名、驱动名称和应用名称
+        run: |
+          sed -i "s/package=\"[^\"]*\"/package=\"${{ github.event.inputs.package_name }}\"/" app/src/main/AndroidManifest.xml
+
+          sed -i "/android:name=\"driver\"/s/android:value=\"[^\"]*\"/android:value=\"${{ github.event.inputs.driver_name }}\"/" app/src/main/AndroidManifest.xml
+          
+          if [ -f app/src/main/res/values/strings.xml ]; then
+            sed -i "s|<string name=\"app_name\">[^<]*</string>|<string name=\"app_name\">${{ github.event.inputs.driver_name }}</string>|" app/src/main/res/values/strings.xml
+          fi
+          
+          echo "===== 修改后的 AndroidManifest.xml 关键部分 ====="
+          grep -E "package=|android:name=\"driver\"" app/src/main/AndroidManifest.xml
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: |
+          mv app/build/outputs/apk/debug/app-debug.apk \
+             "app/build/outputs/apk/debug/${{ github.event.inputs.driver_name }}.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: FCL-Turnip-Gen8-v35
+          name: FCL-${{ github.event.inputs.driver_name }}
           path: app/build/outputs/apk/debug/*.apk
