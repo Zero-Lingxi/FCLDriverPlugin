@@ -6,17 +6,15 @@ on:
       package_name:
         description: 'APK 包名'
         required: true
-        default: 'com.plugin.renderer.turnipdefault'
+        default: 'com.plugin.renderer.turnip'
       driver_name:
         description: '驱动名称'
         required: true
-        default: 'Turnip default'
+        default: 'Turnip'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -36,24 +34,17 @@ jobs:
 
       - name: 修改包名、驱动名称和应用名称
         run: |
-          sed -i "s/package=\"[^\"]*\"/package=\"${{ github.event.inputs.package_name }}\"/" app/src/main/AndroidManifest.xml
-
-          sed -i "/android:name=\"driver\"/s/android:value=\"[^\"]*\"/android:value=\"${{ github.event.inputs.driver_name }}\"/" app/src/main/AndroidManifest.xml
-          
-          if [ -f app/src/main/res/values/strings.xml ]; then
-            sed -i "s|<string name=\"app_name\">[^<]*</string>|<string name=\"app_name\">${{ github.event.inputs.driver_name }}</string>|" app/src/main/res/values/strings.xml
-          fi
-          
-          echo "===== 修改后的 AndroidManifest.xml 关键部分 ====="
-          grep -E "package=|android:name=\"driver\"" app/src/main/AndroidManifest.xml
+          GRADLE_FILE="app/build.gradle.kts"
+          sed -i 's/applicationId = "[^"]*"/applicationId = "${{ github.event.inputs.package_name }}"/' $GRADLE_FILE
+          sed -i 's/applicationIdSuffix = "[^"]*"/applicationIdSuffix = ""/' $GRADLE_FILE
+          sed -i 's/resValue("string","app_name","[^"]*")/resValue("string","app_name","${{ github.event.inputs.driver_name }}")/' $GRADLE_FILE
+          sed -i 's/manifestPlaceholders\["driver"\] = "[^"]*"/manifestPlaceholders["driver"] = "${{ github.event.inputs.driver_name }}"/' $GRADLE_FILE
+          sed -i 's/package="[^"]*"/package="${{ github.event.inputs.package_name }}"/' app/src/main/AndroidManifest.xml
+          echo "===== 修改结果 ====="
+          grep -E "applicationId|applicationIdSuffix|resValue|manifestPlaceholders" $GRADLE_FILE
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
-
-      - name: Rename APK
-        run: |
-          mv app/build/outputs/apk/debug/app-debug.apk \
-             "app/build/outputs/apk/debug/${{ github.event.inputs.driver_name }}.apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
